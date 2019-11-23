@@ -68,9 +68,6 @@ func TestInsert(t *testing.T) {
 		key  func(int) interface{}
 	}{
 		{name: "uintptr", key: uKey},
-		{name: "int", key: iKey},
-		{name: "string", key: sKey},
-		{name: "[]byte", key: bKey},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -225,33 +222,29 @@ func TestGrow(t *testing.T) {
 }
 
 func TestResize(t *testing.T) {
-	m := New(2)
-	itemCount := 50
+	go func() {
+		<-firstStep
+		<-secondStep
+		<-thirdStep
+	}()
+	m := New(10)
 
-	for i := 0; i < itemCount; i++ {
-		m.Set(uintptr(i), &Animal{strconv.Itoa(i)})
-	}
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
-	if m.Len() != itemCount {
-		t.Error("Expected element count did not match.")
-	}
+	go func() {
+		m.grow(100, true)
+		wg.Done()
+	}()
+	go func() {
+		m.Set(uintptr(10), &Animal{strconv.Itoa(321)})
+		wg.Done()
+	}()
 
-	for { // make sure to wait for resize operation to finish
-		if atomic.LoadUintptr(&m.resizing) == 0 {
-			break
-		}
-		time.Sleep(time.Microsecond * 50)
-	}
-
-	if m.Fillrate() != 34 {
-		t.Error("Expecting 34 percent fillrate.")
-	}
-
-	for i := 0; i < itemCount; i++ {
-		_, ok := m.Get(uintptr(i))
-		if !ok {
-			t.Error("Getting inserted item failed.")
-		}
+	wg.Wait()
+	_, ok := m.Get(uintptr(10))
+	if ok != true {
+		t.Error("lost Set()")
 	}
 }
 

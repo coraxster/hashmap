@@ -237,14 +237,23 @@ func (m *HashMap) SetHashedKey(hashedKey uintptr, value interface{}) {
 	m.insertListElement(element, true)
 }
 
+var firstStep = make(chan struct{})
+var secondStep = make(chan struct{})
+var thirdStep = make(chan struct{})
+
 func (m *HashMap) insertListElement(element *ListElement, update bool) bool {
 	for {
+		//start resize, first fillIndexItems
+		<-firstStep
 		data, existing := m.indexElement(element.keyHash)
 		if data == nil {
 			m.allocate(DefaultSize)
 			continue // read mapdata and slice item again
 		}
 		list := m.list()
+		<-secondStep //unlock growing
+		// swap data, second fillIndexItems
+		<-thirdStep
 
 		if update {
 			if !list.AddOrUpdate(element, existing) {
@@ -351,9 +360,16 @@ func (m *HashMap) grow(newSize uintptr, loop bool) {
 
 		m.fillIndexItems(newdata) // initialize new index slice with longer keys
 
+		firstStep <- struct{}{}
+		// start Setting, take list
+		secondStep <- struct{}{} // wait for taking list done
+
 		atomic.StorePointer(&m.datamap, unsafe.Pointer(newdata))
 
 		m.fillIndexItems(newdata) // make sure that the new index is up to date with the current state of the linked list
+
+		thirdStep <- struct{}{}
+		// update list
 
 		if !loop {
 			break
