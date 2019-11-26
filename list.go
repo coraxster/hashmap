@@ -1,7 +1,9 @@
 package hashmap
 
 import (
+	"math/rand"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
 
@@ -137,10 +139,15 @@ func (l *List) insertAt(element *ListElement, left *ListElement, right *ListElem
 		element.previousElement = unsafe.Pointer(left)
 		element.nextElement = unsafe.Pointer(right)
 
+		rand.Seed(int64(time.Now().Nanosecond()))
+		time.Sleep(time.Duration(rand.Intn(10)))
+
 		if !atomic.CompareAndSwapPointer(&left.nextElement, unsafe.Pointer(right), unsafe.Pointer(element)) {
 			return false // item was modified concurrently
 		}
 
+		rand.Seed(int64(time.Now().Nanosecond()))
+		time.Sleep(time.Duration(rand.Intn(10)))
 		if right != nil {
 			if !atomic.CompareAndSwapPointer(&right.previousElement, unsafe.Pointer(left), unsafe.Pointer(element)) {
 				return false // item was modified concurrently
@@ -163,14 +170,20 @@ func (l *List) Delete(element *ListElement) {
 		right := element.Next()
 
 		if left == nil { // element is first item in list?
+			rand.Seed(int64(time.Now().Nanosecond()))
+			time.Sleep(time.Duration(rand.Intn(10)))
 			if !atomic.CompareAndSwapPointer(&l.head.nextElement, unsafe.Pointer(element), unsafe.Pointer(right)) {
 				continue // now head item was inserted concurrently
 			}
 		} else {
+			rand.Seed(int64(time.Now().Nanosecond()))
+			time.Sleep(time.Duration(rand.Intn(10)))
 			if !atomic.CompareAndSwapPointer(&left.nextElement, unsafe.Pointer(element), unsafe.Pointer(right)) {
 				continue // item was modified concurrently
 			}
 		}
+		rand.Seed(int64(time.Now().Nanosecond()))
+		time.Sleep(time.Duration(rand.Intn(10)))
 		if right != nil {
 			atomic.CompareAndSwapPointer(&right.previousElement, unsafe.Pointer(element), unsafe.Pointer(left))
 		}
