@@ -22,7 +22,7 @@ func TestListNew(t *testing.T) {
 
 func TestList_insertAt(t *testing.T) {
 	//
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 200; i++ {
 		el1 := &ListElement{
 			key:     111,
 			keyHash: 111,
@@ -36,8 +36,8 @@ func TestList_insertAt(t *testing.T) {
 			keyHash: 333,
 		}
 		newIl := &ListElement{
-			key:     444,
-			keyHash: 444,
+			key:     223,
+			keyHash: 223,
 		}
 		l := NewList()
 		l.Add(el1, nil)
@@ -57,18 +57,20 @@ func TestList_insertAt(t *testing.T) {
 			rand.Seed(int64(time.Now().Nanosecond()))
 			time.Sleep(time.Duration(rand.Intn(10)))
 			for {
-				if r := l.insertAt(newIl, el1, el2); r {
+				if _, inserted := l.Add(newIl, nil); inserted {
 					return
 				}
 			}
 		}()
-
 		wg.Wait()
-		if _, found, _ := l.search(el1, newIl); found == nil {
-			t.Error("newIl not found")
-		}
+
 		if le := l.Len(); le != 3 {
 			t.Error("l.Len() != 3", le)
+			return
+		}
+		if _, found, _ := l.search(nil, newIl); found == nil {
+			t.Error("newIl not found")
+			return
 		}
 	}
 }
